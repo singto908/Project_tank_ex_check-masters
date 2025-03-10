@@ -80,6 +80,84 @@ class RequestDetailPage extends StatelessWidget {
 
   RequestDetailPage({required this.requestId});
 
+  void _completeRequest(BuildContext context, Map<String, dynamic> data) async {
+    String tankId = data['tank_id'] ?? 'ไม่ระบุ';
+    String technicianName =
+        "ช่างหนึ่ง คำนวณ"; // ค่าตัวอย่าง สามารถรับจากระบบล็อกอินได้
+    String repairDetails = "สายฉีดถังดับเพลิง"; // ค่าตัวอย่าง
+
+    FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    try {
+      // ✅ 1. ค้นหาเอกสาร firetank_Collection ที่มี tank_id
+      QuerySnapshot querySnapshot = await firestore
+          .collection('firetank_Collection')
+          .where('tank_id', isEqualTo: tankId)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('ไม่พบถังดับเพลิงที่มี tank_id: $tankId'),
+          backgroundColor: Colors.red,
+        ));
+        return;
+      }
+
+      // ✅ 2. อัปเดตสถานะ firetank_Collection
+      for (var doc in querySnapshot.docs) {
+        await firestore.collection('firetank_Collection').doc(doc.id).update({
+          'status': 'ตรวจสอบแล้ว',
+          'status_technician': 'ตรวจสอบแล้ว',
+          'updated_at': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // ✅ 3. ค้นหา FE_updates ก่อน ถ้ามีให้อัปเดต ถ้าไม่มีให้สร้างใหม่
+      QuerySnapshot feUpdateSnapshot = await firestore
+          .collection('FE_updates')
+          .where('tank_id', isEqualTo: tankId)
+          .get();
+
+      if (feUpdateSnapshot.docs.isNotEmpty) {
+        // ถ้ามีอยู่แล้ว → อัปเดตข้อมูล
+        for (var doc in feUpdateSnapshot.docs) {
+          await firestore.collection('FE_updates').doc(doc.id).update({
+            'status_tech': 'ซ่อมแล้ว',
+            'repair_details': repairDetails,
+            'repair_date': FieldValue.serverTimestamp(),
+            'technician_name': technicianName,
+          });
+        }
+      } else {
+        // ถ้าไม่มี → สร้างใหม่
+        await firestore.collection('FE_updates').add({
+          'tank_id': tankId,
+          'status_tech': 'ซ่อมแล้ว',
+          'repair_details': repairDetails,
+          'repair_date': FieldValue.serverTimestamp(),
+          'technician_name': technicianName,
+          'user_type': 'ช่างเทคนิค'
+        });
+      }
+
+      // ✅ 4. ลบคำขอออกจาก technician_requests
+      await firestore.collection('technician_requests').doc(requestId).delete();
+
+      // ✅ 5. แจ้งเตือนสำเร็จ และปิดหน้า
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('อัปเดตสำเร็จ ถังดับเพลิงถูกตั้งค่าเป็น "ตรวจสอบแล้ว"'),
+        backgroundColor: Colors.green,
+      ));
+
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('เกิดข้อผิดพลาด: $e'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,60 +196,85 @@ class RequestDetailPage extends StatelessWidget {
 
           return SingleChildScrollView(
             padding: EdgeInsets.all(16),
-            child: Card(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              elevation: 4,
-              color: Colors.white,
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('รหัสถัง: $tankId',
-                        style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange)),
-                    Divider(color: Colors.orange, thickness: 2),
-                    SizedBox(height: 8),
-                    buildDetailRow(Icons.location_city, 'อาคาร', building),
-                    buildDetailRow(Icons.apartment, 'ชั้น', floor),
-                    buildDetailRow(Icons.person, 'ผู้ตรวจสอบ', inspector),
-                    buildDetailRow(Icons.note, 'หมายเหตุ', remarks),
-                    buildDetailRow(Icons.assignment_turned_in, 'สถานะ', status),
-                    SizedBox(height: 16),
-                    Text('🔧 ส่วนที่เสียหาย',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.redAccent)),
-                    Divider(color: Colors.redAccent, thickness: 1),
-                    damagedParts != null
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: damagedParts.entries.map((entry) {
-                              return Padding(
-                                padding: EdgeInsets.symmetric(vertical: 4),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.warning_amber,
-                                        color: Colors.redAccent, size: 20),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                        child: Text(
-                                            '${entry.key}: ${entry.value}',
-                                            style: TextStyle(fontSize: 16))),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          )
-                        : Text('ไม่มีข้อมูล',
-                            style: TextStyle(color: Colors.grey)),
-                  ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Card(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 4,
+                  color: Colors.white,
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('รหัสถัง: $tankId',
+                            style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange)),
+                        Divider(color: Colors.orange, thickness: 2),
+                        buildDetailRow(Icons.location_city, 'อาคาร', building),
+                        buildDetailRow(Icons.apartment, 'ชั้น', floor),
+                        buildDetailRow(Icons.person, 'ผู้ตรวจสอบ', inspector),
+                        buildDetailRow(Icons.note, 'หมายเหตุ', remarks),
+                        buildDetailRow(
+                            Icons.assignment_turned_in, 'สถานะ', status),
+                        SizedBox(height: 16),
+                        Text('🔧 ส่วนที่เสียหาย',
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.redAccent)),
+                        Divider(color: Colors.redAccent, thickness: 1),
+                        damagedParts != null
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: damagedParts.entries.map((entry) {
+                                  return Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 4),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.warning_amber,
+                                            color: Colors.redAccent, size: 20),
+                                        SizedBox(width: 8),
+                                        Expanded(
+                                            child: Text(
+                                                '${entry.key}: ${entry.value}',
+                                                style:
+                                                    TextStyle(fontSize: 16))),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              )
+                            : Text('ไม่มีข้อมูล',
+                                style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                SizedBox(height: 20),
+
+                // 🔥 ปุ่ม "เสร็จสิ้น" สำหรับอัปเดตสถานะและลบคำขอ
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _completeRequest(context, data),
+                    icon: Icon(Icons.check_circle, color: Colors.white),
+                    label: Text('เสร็จสิ้น',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         },
