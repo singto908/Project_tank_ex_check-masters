@@ -1,4 +1,4 @@
-package com.example.firecheck_setup
+package com.example.firecheck
 
 import io.flutter.embedding.android.FlutterActivity
 

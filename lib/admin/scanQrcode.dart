@@ -47,7 +47,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 _qrController = controller;
                 _qrController.scannedDataStream.listen((scanData) {
                   // ไปยังหน้าต่าง UI ตามข้อมูลที่สแกน
-                  if (scanData != null && !_isScanning) {
+                  if (!_isScanning) {
                     setState(() {
                       _isScanning = true;
                     });

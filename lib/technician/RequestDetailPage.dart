@@ -34,7 +34,6 @@ class RequestDetailPage extends StatelessWidget {
 
           var data = snapshot.data!.data() as Map<String, dynamic>;
           String tankId = data['tank_id'] ?? 'ไม่ระบุ';
-          String status = data['status'] ?? 'ไม่ระบุ';
           String building = data['building'] ?? 'ไม่ระบุ';
           String floor = data['floor'] ?? 'ไม่ระบุ';
           String inspector = data['inspector'] ?? 'ไม่ระบุ';
