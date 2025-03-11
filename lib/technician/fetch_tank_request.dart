@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class TechnicianRequestsScreen extends StatelessWidget {
+class TechnicianRequestsScreen extends StatefulWidget {
+  @override
+  _TechnicianRequestsScreenState createState() =>
+      _TechnicianRequestsScreenState();
+}
+
+class _TechnicianRequestsScreenState extends State<TechnicianRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('คำขอของช่างเทคนิค', style: TextStyle(color: Colors.white)),
+        title: Text('คำขอเปลี่ยนถัง', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.orange,
         iconTheme: IconThemeData(color: Colors.white),
       ),
@@ -20,6 +26,14 @@ class TechnicianRequestsScreen extends StatelessWidget {
                 child: CircularProgressIndicator(color: Colors.orange));
           }
           var requests = snapshot.data!.docs;
+          if (requests.isEmpty) {
+            return Center(
+              child: Text(
+                'ไม่มีคำร้องขอเปลี่ยนถัง',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            );
+          }
           return ListView.builder(
             itemCount: requests.length,
             itemBuilder: (context, index) {
@@ -51,14 +65,15 @@ class TechnicianRequestsScreen extends StatelessWidget {
                     ],
                   ),
                   trailing: Icon(Icons.arrow_forward_ios, color: Colors.orange),
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            TechnicianRequestDetailScreen(request: request),
+                        builder: (context) => TechnicianRequestDetailScreen(
+                            requestId: request.id),
                       ),
                     );
+                    setState(() {}); // รีเฟรชหน้าหลังจากกลับจากหน้ารายละเอียด
                   },
                 ),
               );
@@ -71,9 +86,9 @@ class TechnicianRequestsScreen extends StatelessWidget {
 }
 
 class TechnicianRequestDetailScreen extends StatefulWidget {
-  final QueryDocumentSnapshot request;
+  final String requestId;
 
-  TechnicianRequestDetailScreen({required this.request});
+  TechnicianRequestDetailScreen({required this.requestId});
 
   @override
   _TechnicianRequestDetailScreenState createState() =>
@@ -85,18 +100,37 @@ class _TechnicianRequestDetailScreenState
   bool isAccepted = false;
   bool isProcessing = false;
   bool isCompleted = false;
+  Map<String, dynamic>? requestData;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRequestData();
+  }
+
+  void _fetchRequestData() async {
+    var doc = await FirebaseFirestore.instance
+        .collection('technician_chang_requests')
+        .doc(widget.requestId)
+        .get();
+    if (doc.exists) {
+      setState(() {
+        requestData = doc.data();
+        isAccepted = requestData!['status'] == 'running';
+        isCompleted = requestData!['status'] == 'completed';
+      });
+    }
+  }
 
   void _handleAcceptPress() async {
+    await FirebaseFirestore.instance
+        .collection('technician_chang_requests')
+        .doc(widget.requestId)
+        .update({'status': 'running'});
     setState(() {
       isAccepted = true;
       isProcessing = true;
     });
-
-    await FirebaseFirestore.instance
-        .collection('technician_chang_requests')
-        .doc(widget.request.id)
-        .update({'status': 'running'});
-
     Future.delayed(Duration(seconds: 3), () {
       setState(() {
         isProcessing = false;
@@ -106,28 +140,22 @@ class _TechnicianRequestDetailScreenState
   }
 
   void _handleCompletePress() async {
-    // ย้ายข้อมูลไปยัง record_update
     await FirebaseFirestore.instance
         .collection('record_update')
-        .add(widget.request.data() as Map<String, dynamic>);
-
-    // ลบข้อมูลออกจาก technician_chang_requests
+        .add(requestData!);
     await FirebaseFirestore.instance
         .collection('technician_chang_requests')
-        .doc(widget.request.id)
+        .doc(widget.requestId)
         .delete();
-
-    // อัปเดตสถานะใน firetank_Collection ตาม tank_id
     await FirebaseFirestore.instance
         .collection('firetank_Collection')
-        .where('tank_id', isEqualTo: widget.request['tank_id'])
+        .where('tank_id', isEqualTo: requestData!['tank_id'])
         .get()
         .then((querySnapshot) {
       for (var doc in querySnapshot.docs) {
         doc.reference.update({'status': 'ตรวจสอบแล้ว'});
       }
     });
-
     Navigator.pop(context);
   }
 
@@ -135,95 +163,86 @@ class _TechnicianRequestDetailScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('รายละเอียดคำขอ', style: TextStyle(color: Colors.white)),
+        title: Text('รายละเอียดคำขอเปลี่ยนถัง',
+            style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.orange,
         iconTheme: IconThemeData(color: Colors.white),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Card(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 4,
-          child: Padding(
-            padding: EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('รหัสถัง: ${widget.request['tank_id']}',
-                    style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange)),
-                Divider(color: Colors.orange, thickness: 1.5),
-                SizedBox(height: 8),
-                _buildDetailRow(
-                    Icons.business, 'อาคาร', widget.request['building']),
-                _buildDetailRow(Icons.layers, 'ชั้น', widget.request['floor']),
-                _buildDetailRow(Icons.warning, 'เหตุผล',
-                    widget.request['reason'] ?? 'ไม่มีเหตุผล'),
-                _buildDetailRow(
-                    Icons.verified, 'สถานะ', widget.request['status']),
-                _buildDetailRow(
-                    Icons.category, 'ประเภท', widget.request['type']),
-                Spacer(),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      padding: EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: isAccepted
-                        ? (isProcessing ? null : _handleCompletePress)
-                        : _handleAcceptPress,
-                    child: isAccepted
-                        ? (isProcessing
-                            ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                        color: Colors.white, strokeWidth: 2),
-                                  ),
-                                  SizedBox(width: 10),
-                                  Text('กำลังดำเนินการ...',
+      body: requestData == null
+          ? Center(child: CircularProgressIndicator(color: Colors.orange))
+          : Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Card(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                elevation: 4,
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('รหัสถัง: ${requestData!['tank_id']}',
+                          style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange)),
+                      Divider(color: Colors.orange, thickness: 1.5),
+                      SizedBox(height: 8),
+                      _buildDetailRow(
+                          Icons.business, 'อาคาร', requestData!['building']),
+                      _buildDetailRow(
+                          Icons.layers, 'ชั้น', requestData!['floor']),
+                      _buildDetailRow(Icons.warning, 'เหตุผล',
+                          requestData!['reason'] ?? 'ไม่มีเหตุผล'),
+                      _buildDetailRow(
+                          Icons.verified, 'สถานะ', requestData!['status']),
+                      _buildDetailRow(
+                          Icons.category, 'ประเภท', requestData!['type']),
+                      Spacer(),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: isAccepted
+                              ? (isProcessing ? null : _handleCompletePress)
+                              : _handleAcceptPress,
+                          child: isAccepted
+                              ? (isProcessing
+                                  ? CircularProgressIndicator(
+                                      color: Colors.white)
+                                  : Text('เสร็จสิ้น',
                                       style: TextStyle(
-                                          fontSize: 18, color: Colors.white)),
-                                ],
-                              )
-                            : Text('เสร็จสิ้น',
-                                style: TextStyle(
-                                    color: Colors.white, fontSize: 18)))
-                        : Text('ยอมรับ',
-                            style:
-                                TextStyle(color: Colors.white, fontSize: 18)),
+                                          color: Colors.white, fontSize: 18)))
+                              : Text('ยอมรับ',
+                                  style: TextStyle(
+                                      color: Colors.white, fontSize: 18)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
     );
   }
+}
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.orange, size: 22),
-          SizedBox(width: 10),
-          Text('$label: ',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          Expanded(child: Text(value, style: TextStyle(fontSize: 16))),
-        ],
-      ),
-    );
-  }
+Widget _buildDetailRow(IconData icon, String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      children: [
+        Icon(icon, color: Colors.orange, size: 22),
+        SizedBox(width: 10),
+        Text('$label: ',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Expanded(child: Text(value, style: TextStyle(fontSize: 16))),
+      ],
+    ),
+  );
 }
