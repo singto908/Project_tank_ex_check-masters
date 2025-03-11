@@ -70,10 +70,66 @@ class TechnicianRequestsScreen extends StatelessWidget {
   }
 }
 
-class TechnicianRequestDetailScreen extends StatelessWidget {
+class TechnicianRequestDetailScreen extends StatefulWidget {
   final QueryDocumentSnapshot request;
 
   TechnicianRequestDetailScreen({required this.request});
+
+  @override
+  _TechnicianRequestDetailScreenState createState() =>
+      _TechnicianRequestDetailScreenState();
+}
+
+class _TechnicianRequestDetailScreenState
+    extends State<TechnicianRequestDetailScreen> {
+  bool isAccepted = false;
+  bool isProcessing = false;
+  bool isCompleted = false;
+
+  void _handleAcceptPress() async {
+    setState(() {
+      isAccepted = true;
+      isProcessing = true;
+    });
+
+    await FirebaseFirestore.instance
+        .collection('technician_chang_requests')
+        .doc(widget.request.id)
+        .update({'status': 'running'});
+
+    Future.delayed(Duration(seconds: 3), () {
+      setState(() {
+        isProcessing = false;
+        isCompleted = true;
+      });
+    });
+  }
+
+  void _handleCompletePress() async {
+    // ย้ายข้อมูลไปยัง record_update
+    await FirebaseFirestore.instance
+        .collection('record_update')
+        .add(widget.request.data() as Map<String, dynamic>);
+
+    // ลบข้อมูลออกจาก technician_chang_requests
+    await FirebaseFirestore.instance
+        .collection('technician_chang_requests')
+        .doc(widget.request.id)
+        .delete();
+
+    // อัปเดตสถานะใน firetank_Collection ตาม tank_id
+    await FirebaseFirestore.instance
+        .collection('firetank_Collection')
+        .where('tank_id', isEqualTo: widget.request['tank_id'])
+        .get()
+        .then((querySnapshot) {
+      for (var doc in querySnapshot.docs) {
+        doc.reference.update({'status': 'ตรวจสอบแล้ว'});
+      }
+    });
+
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,19 +150,22 @@ class TechnicianRequestDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('รหัสถัง: ${request['tank_id']}',
+                Text('รหัสถัง: ${widget.request['tank_id']}',
                     style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: Colors.orange)),
                 Divider(color: Colors.orange, thickness: 1.5),
                 SizedBox(height: 8),
-                _buildDetailRow(Icons.business, 'อาคาร', request['building']),
-                _buildDetailRow(Icons.layers, 'ชั้น', request['floor']),
+                _buildDetailRow(
+                    Icons.business, 'อาคาร', widget.request['building']),
+                _buildDetailRow(Icons.layers, 'ชั้น', widget.request['floor']),
                 _buildDetailRow(Icons.warning, 'เหตุผล',
-                    request['reason'] ?? 'ไม่มีเหตุผล'),
-                _buildDetailRow(Icons.verified, 'สถานะ', request['status']),
-                _buildDetailRow(Icons.category, 'ประเภท', request['type']),
+                    widget.request['reason'] ?? 'ไม่มีเหตุผล'),
+                _buildDetailRow(
+                    Icons.verified, 'สถานะ', widget.request['status']),
+                _buildDetailRow(
+                    Icons.category, 'ประเภท', widget.request['type']),
                 Spacer(),
                 SizedBox(
                   width: double.infinity,
@@ -117,9 +176,32 @@ class TechnicianRequestDetailScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
                     ),
-                    onPressed: () {},
-                    child: Text('เสร็จสิ้น',
-                        style: TextStyle(color: Colors.white, fontSize: 18)),
+                    onPressed: isAccepted
+                        ? (isProcessing ? null : _handleCompletePress)
+                        : _handleAcceptPress,
+                    child: isAccepted
+                        ? (isProcessing
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        color: Colors.white, strokeWidth: 2),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text('กำลังดำเนินการ...',
+                                      style: TextStyle(
+                                          fontSize: 18, color: Colors.white)),
+                                ],
+                              )
+                            : Text('เสร็จสิ้น',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 18)))
+                        : Text('ยอมรับ',
+                            style:
+                                TextStyle(color: Colors.white, fontSize: 18)),
                   ),
                 ),
               ],
