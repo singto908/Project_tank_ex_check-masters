@@ -1,6 +1,4 @@
-import 'package:firecheck_setup/technician/RequestTankChangePage.dart';
 import 'package:firecheck_setup/technician/TechnicianRequestsPage.dart';
-import 'package:firecheck_setup/technician/fetch_tank_request.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // สำหรับฟอร์แมตวันที่
 import 'package:cloud_firestore/cloud_firestore.dart'; // สำหรับ Firestore
@@ -35,7 +33,7 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
   String? latestCheckDate; // สำหรับวันที่ตรวจสอบล่าสุด
   String? latestCheckTime; // สำหรับเวลา
   String? fireTankType; // เพิ่มตัวแปรเพื่อเก็บค่า type
-  Uint8List? imageBytes;
+  Uint8List? imageBytes; // ตัวแปรเพื่อเก็บข้อมูลภาพ Base64 ที่แปลงแล้ว
 
   @override
   void initState() {
@@ -427,6 +425,51 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
                             return Text(
+                              'วันหมดอายุ: กำลังโหลด...',
+                              style: TextStyle(fontSize: fontSize),
+                            );
+                          }
+
+                          if (snapshot.hasError) {
+                            return Text(
+                              'วันหมดอายุ: เกิดข้อผิดพลาด',
+                              style: TextStyle(fontSize: fontSize),
+                            );
+                          }
+
+                          if (snapshot.hasData &&
+                              snapshot.data!.docs.isNotEmpty) {
+                            var doc = snapshot.data!.docs.first;
+                            int expirationYear = doc[
+                                'expiration_years']; // Fetch expiration year
+
+                            return Row(
+                              children: [
+                                Text(
+                                  'วันหมดอายุ : $expirationYear',
+                                  style: TextStyle(fontSize: fontSize),
+                                ),
+                              ],
+                            );
+                          } else {
+                            return Text(
+                              'วันหมดอายุ: ไม่มีข้อมูล',
+                              style: TextStyle(fontSize: fontSize),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('firetank_Collection')
+                            .where('tank_id', isEqualTo: widget.tankId)
+                            .limit(1)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Text(
                               'สถานะล่าสุด: กำลังโหลด...',
                               style: TextStyle(fontSize: fontSize),
                             );
@@ -466,7 +509,6 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
                                   color: getStatusColor(techStatus),
                                   size: 12,
                                 ),
-
                                 SizedBox(width: 8),
                                 Text(techStatus,
                                     style: TextStyle(fontSize: fontSize)),
@@ -504,6 +546,7 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
                   ),
                 ),
               ),
+
               SizedBox(height: 10),
               if (imageBytes != null)
                 Center(
@@ -534,36 +577,10 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
                 ),
 
               SizedBox(height: 20),
-              Row(
-                children: [
-                  Text(
-                    'Tank ID: ${widget.tankId}',
-                    style: TextStyle(fontSize: fontSize),
-                  ),
-                  Spacer(), // ดันปุ่มไปขวาสุด
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => RequestTankChangePage(
-                                tankId: widget.tankId)), // ใช้ tankId ที่มีอยู่
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8), // ทำมุมโค้งมน
-                      ),
-                    ),
-                    child: Text('ร้องขอเปลี่ยนถัง'),
-                  ),
-                ],
+              Text(
+                'Tank ID: ${widget.tankId}',
+                style: TextStyle(fontSize: fontSize),
               ),
-
               Card(
                 color: Colors.white, // เพิ่มพื้นหลังเป็นสีขาว
 
@@ -1037,16 +1054,11 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
             children: [
               FloatingActionButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          TechnicianRequestsScreen(), // ไปที่หน้าแจ้งชำรุด
-                    ),
-                  );
+                  // ใส่การทำงานที่ต้องการเมื่อกดปุ่ม "อัปเดต"
+                  print("อัปเดต");
                 },
-                child: const Icon(Icons.refresh),
-                backgroundColor: const Color.fromARGB(255, 223, 181, 11),
+                child: Icon(Icons.refresh),
+                backgroundColor: Colors.orange,
               ),
               SizedBox(width: 16), // ช่องว่างระหว่างปุ่ม
               FloatingActionButton(
