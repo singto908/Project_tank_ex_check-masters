@@ -1,3 +1,4 @@
+import 'package:firecheck_setup/technician/RequestTankChangePage.dart';
 import 'package:firecheck_setup/technician/TechnicianRequestsPage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // สำหรับฟอร์แมตวันที่
@@ -33,7 +34,10 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
   String? latestCheckDate; // สำหรับวันที่ตรวจสอบล่าสุด
   String? latestCheckTime; // สำหรับเวลา
   String? fireTankType; // เพิ่มตัวแปรเพื่อเก็บค่า type
-  Uint8List? imageBytes; // ตัวแปรเพื่อเก็บข้อมูลภาพ Base64 ที่แปลงแล้ว
+  Uint8List? imageBytes;
+
+  get requestTankReplacement =>
+      null; // ตัวแปรเพื่อเก็บข้อมูลภาพ Base64 ที่แปลงแล้ว
 
   @override
   void initState() {
@@ -464,6 +468,7 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
                                   color: getStatusColor(techStatus),
                                   size: 12,
                                 ),
+
                                 SizedBox(width: 8),
                                 Text(techStatus,
                                     style: TextStyle(fontSize: fontSize)),
@@ -531,10 +536,35 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
                 ),
 
               SizedBox(height: 20),
-              Text(
-                'Tank ID: ${widget.tankId}',
-                style: TextStyle(fontSize: fontSize),
+              Row(
+                children: [
+                  Text(
+                    'Tank ID: ${widget.tankId}',
+                    style: TextStyle(fontSize: fontSize),
+                  ),
+                  Spacer(), // ดันปุ่มไปขวาสุด
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => RequestTankChangePage()),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red, // พื้นหลังสีแดง
+                      foregroundColor: Colors.white, // ตัวอักษรสีขาว
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12), // ปรับขนาดปุ่ม
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8), // ทำมุมโค้งมน
+                      ),
+                    ),
+                    child: Text('ร้องขอเปลี่ยนถัง'),
+                  ),
+                ],
               ),
+
               Card(
                 color: Colors.white, // เพิ่มพื้นหลังเป็นสีขาว
 
