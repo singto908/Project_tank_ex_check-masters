@@ -36,9 +36,6 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
   String? fireTankType; // เพิ่มตัวแปรเพื่อเก็บค่า type
   Uint8List? imageBytes;
 
-  get requestTankReplacement =>
-      null; // ตัวแปรเพื่อเก็บข้อมูลภาพ Base64 ที่แปลงแล้ว
-
   @override
   void initState() {
     super.initState();
