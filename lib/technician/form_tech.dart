@@ -1,3 +1,4 @@
+import 'package:firecheck_setup/technician/RequestTankChangePage.dart';
 import 'package:firecheck_setup/technician/TechnicianRequestsPage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // สำหรับฟอร์แมตวันที่
@@ -546,7 +547,6 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
                   ),
                 ),
               ),
-
               SizedBox(height: 10),
               if (imageBytes != null)
                 Center(
@@ -577,9 +577,34 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
                 ),
 
               SizedBox(height: 20),
-              Text(
-                'Tank ID: ${widget.tankId}',
-                style: TextStyle(fontSize: fontSize),
+              Row(
+                children: [
+                  Text(
+                    'Tank ID: ${widget.tankId}',
+                    style: TextStyle(fontSize: fontSize),
+                  ),
+                  Spacer(), // ดันปุ่มไปขวาสุด
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => RequestTankChangePage(
+                                tankId: widget.tankId)), // ใช้ tankId ที่มีอยู่
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8), // ทำมุมโค้งมน
+                      ),
+                    ),
+                    child: Text('ร้องขอเปลี่ยนถัง'),
+                  ),
+                ],
               ),
               Card(
                 color: Colors.white, // เพิ่มพื้นหลังเป็นสีขาว
