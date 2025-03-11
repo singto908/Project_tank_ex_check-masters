@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RequestTankChangePage extends StatefulWidget {
-  final String tankId; // รับค่า tank_id ที่ส่งมาจาก FormTechCheckPage
+  final String tankId;
 
   RequestTankChangePage({required this.tankId});
 
@@ -15,14 +15,17 @@ class _RequestTankChangePageState extends State<RequestTankChangePage> {
   bool isLoading = true;
   bool isSubmitting = false;
   Map<String, dynamic>? tankData;
+  List<String> tankTypes = [];
+  String? selectedTankType;
 
   @override
   void initState() {
     super.initState();
     fetchTankData();
+    fetchTankTypes();
   }
 
-  /// ดึงข้อมูลถังดับเพลิงจาก Firestore โดยใช้ tank_id
+  /// ดึงข้อมูลถังดับเพลิงจาก Firestore
   Future<void> fetchTankData() async {
     try {
       var snapshot = await FirebaseFirestore.instance
@@ -33,6 +36,7 @@ class _RequestTankChangePageState extends State<RequestTankChangePage> {
       if (snapshot.docs.isNotEmpty) {
         setState(() {
           tankData = snapshot.docs.first.data();
+          selectedTankType = tankData!['type']; // ตั้งค่าประเภทถังเริ่มต้น
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -50,7 +54,26 @@ class _RequestTankChangePageState extends State<RequestTankChangePage> {
     });
   }
 
-  /// ✅ ฟังก์ชันบันทึกข้อมูลไปยัง change_requests ใน Firestore
+  /// ดึงข้อมูลประเภทถังจาก FE_type
+  Future<void> fetchTankTypes() async {
+    try {
+      var snapshot =
+          await FirebaseFirestore.instance.collection('FE_type').get();
+
+      if (snapshot.docs.isNotEmpty) {
+        setState(() {
+          tankTypes =
+              snapshot.docs.map((doc) => doc['type'].toString()).toList();
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาดในการโหลดประเภทถัง: $e')),
+      );
+    }
+  }
+
+  /// ✅ ฟังก์ชันบันทึกคำขอไปยัง Firestore
   Future<void> submitRequest() async {
     if (tankData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -70,21 +93,27 @@ class _RequestTankChangePageState extends State<RequestTankChangePage> {
     });
 
     try {
+      DateTime requestDate = DateTime.now();
+      DateTime expireDate = requestDate.add(Duration(days: 5 * 365)); // +5 ปี
+
       await FirebaseFirestore.instance.collection('change_requests').add({
         'tank_id': tankData!['tank_id'],
         'building': tankData!['building'],
         'floor': tankData!['floor'],
-        'type': tankData!['type'],
+        'current_tank_type': tankData!['type'], // 🏷️ ประเภทถังเดิม
+        'new_tank_type': selectedTankType, // ✅ ประเภทถังที่เลือกใหม่
         'reason': reasonController.text,
-        'status': 'pending', // กำหนดให้สถานะเริ่มต้นเป็น "รออนุมัติ"
-        'timestamp': FieldValue.serverTimestamp(), // ใช้เวลาปัจจุบัน
+        'status': 'pending',
+        'request_date': requestDate,
+        'expire_date': expireDate,
+        'timestamp': FieldValue.serverTimestamp(),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('ส่งคำขอเปลี่ยนถังสำเร็จ!')),
       );
 
-      Navigator.pop(context); // ปิดหน้าหลังจากส่งคำขอสำเร็จ
+      Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
@@ -99,10 +128,10 @@ class _RequestTankChangePageState extends State<RequestTankChangePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // พื้นหลังสีขาว
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text('ร้องขอเปลี่ยนถัง', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.orange, // หัวข้อสีส้ม
+        backgroundColor: Colors.orange,
         iconTheme: IconThemeData(color: Colors.white),
       ),
       body: Padding(
@@ -145,12 +174,42 @@ class _RequestTankChangePageState extends State<RequestTankChangePage> {
                                 ],
                               ),
                               Divider(color: Colors.orange),
-                              Text('ประเภท: ${tankData!['type']}',
-                                  style: TextStyle(fontSize: 16)),
                               Text('อาคาร: ${tankData!['building']}',
                                   style: TextStyle(fontSize: 16)),
                               Text('ชั้น: ${tankData!['floor']}',
                                   style: TextStyle(fontSize: 16)),
+                              SizedBox(height: 8),
+                              Text('ประเภทถังปัจจุบัน: ${tankData!['type']}',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold)),
+                              SizedBox(height: 8),
+                              Text('เลือกประเภทถังใหม่:',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange)),
+                              DropdownButtonFormField<String>(
+                                value: selectedTankType,
+                                items: tankTypes.map((type) {
+                                  return DropdownMenuItem(
+                                    value: type,
+                                    child: Text(type),
+                                  );
+                                }).toList(),
+                                onChanged: (newValue) {
+                                  setState(() {
+                                    selectedTankType = newValue;
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -169,12 +228,6 @@ class _RequestTankChangePageState extends State<RequestTankChangePage> {
                           prefixIcon: Icon(Icons.edit, color: Colors.orange),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.orange),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                BorderSide(color: Colors.orange, width: 2),
                           ),
                         ),
                       ),
@@ -186,8 +239,7 @@ class _RequestTankChangePageState extends State<RequestTankChangePage> {
                           : SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed:
-                                    submitRequest, // ✅ กดแล้วบันทึกไป Firestore
+                                onPressed: submitRequest,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.orange,
                                   foregroundColor: Colors.white,
