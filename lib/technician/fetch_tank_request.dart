@@ -152,8 +152,17 @@ class _TechnicianRequestDetailScreenState
         .where('tank_id', isEqualTo: requestData!['tank_id'])
         .get()
         .then((querySnapshot) {
-      for (var doc in querySnapshot.docs) {
-        doc.reference.update({'status': 'ตรวจสอบแล้ว'});
+      if (querySnapshot.docs.isEmpty) {
+        print(
+            'Error: No document found with tank_id = ${requestData!['tank_id']}');
+      } else {
+        for (var doc in querySnapshot.docs) {
+          doc.reference.update({
+            'status': 'ตรวจสอบแล้ว',
+            'status_technician': 'ตรวจสอบแล้ว',
+            'type': requestData!['new_tank_type'] ?? 'ไม่ระบุ'
+          });
+        }
       }
     });
     Navigator.pop(context);
