@@ -8,25 +8,56 @@ class AdminApproveRequestsPage extends StatefulWidget {
 }
 
 class _AdminApproveRequestsPageState extends State<AdminApproveRequestsPage> {
-  /// ฟังก์ชันอัปเดตสถานะคำขอ (อนุมัติ หรือ ปฏิเสธ)
-  Future<void> updateRequestStatus(String requestId, String status) async {
+  /// ✅ ฟังก์ชันอนุมัติคำขอ → ย้ายไป `technician_change_requests`
+  Future<void> approveRequest(
+      String requestId, Map<String, dynamic> requestData) async {
     try {
+      // 1️⃣ บันทึกข้อมูลไปที่ `technician_change_requests`
+      await FirebaseFirestore.instance
+          .collection('technician_chang_requests')
+          .doc(requestId)
+          .set({
+        ...requestData, // คัดลอกข้อมูลทั้งหมด
+        'status': 'approved',
+        'approved_at': FieldValue.serverTimestamp(), // เวลาที่อนุมัติ
+      });
+
+      // 2️⃣ ลบคำขอออกจาก `change_requests`
       await FirebaseFirestore.instance
           .collection('change_requests')
           .doc(requestId)
-          .update({'status': status});
+          .delete();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              status == 'approved' ? 'อนุมัติคำขอสำเร็จ ✅' : 'ปฏิเสธคำขอ ❌'),
-          backgroundColor: status == 'approved' ? Colors.green : Colors.red,
-        ),
+            content: Text('✅ อนุมัติคำขอแล้ว!'), backgroundColor: Colors.green),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red),
+            content: Text('❌ เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  /// ❌ ฟังก์ชันปฏิเสธคำขอ → ลบจาก `change_requests`
+  Future<void> rejectRequest(String requestId) async {
+    try {
+      // ลบเอกสารออกจาก `change_requests`
+      await FirebaseFirestore.instance
+          .collection('change_requests')
+          .doc(requestId)
+          .delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('❌ ปฏิเสธคำขอเรียบร้อย!'),
+            backgroundColor: Colors.red),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('❌ เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -122,7 +153,7 @@ class _AdminApproveRequestsPageState extends State<AdminApproveRequestsPage> {
                             Expanded(
                               child: ElevatedButton(
                                 onPressed: () =>
-                                    updateRequestStatus(requestId, 'approved'),
+                                    approveRequest(requestId, data),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green,
                                   foregroundColor: Colors.white,
@@ -138,8 +169,7 @@ class _AdminApproveRequestsPageState extends State<AdminApproveRequestsPage> {
                             SizedBox(width: 10),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: () =>
-                                    updateRequestStatus(requestId, 'rejected'),
+                                onPressed: () => rejectRequest(requestId),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.red,
                                   foregroundColor: Colors.white,
