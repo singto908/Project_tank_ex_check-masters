@@ -196,8 +196,8 @@ class _TechnicianRequestDetailScreenState
                           requestData!['reason'] ?? 'ไม่มีเหตุผล'),
                       _buildDetailRow(
                           Icons.verified, 'สถานะ', requestData!['status']),
-                      _buildDetailRow(
-                          Icons.category, 'ประเภท', requestData!['type']),
+                      _buildDetailRow(Icons.category, 'ประเภท',
+                          requestData!['current_tank_type']),
                       Spacer(),
                       SizedBox(
                         width: double.infinity,
