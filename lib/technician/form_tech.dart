@@ -1,5 +1,6 @@
 import 'package:firecheck_setup/technician/RequestTankChangePage.dart';
 import 'package:firecheck_setup/technician/TechnicianRequestsPage.dart';
+import 'package:firecheck_setup/technician/fetch_tank_request.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // สำหรับฟอร์แมตวันที่
 import 'package:cloud_firestore/cloud_firestore.dart'; // สำหรับ Firestore
@@ -1036,11 +1037,16 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
             children: [
               FloatingActionButton(
                 onPressed: () {
-                  // ใส่การทำงานที่ต้องการเมื่อกดปุ่ม "อัปเดต"
-                  print("อัปเดต");
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          TechnicianRequestsScreen(), // ไปที่หน้าแจ้งชำรุด
+                    ),
+                  );
                 },
-                child: Icon(Icons.refresh),
-                backgroundColor: Colors.orange,
+                child: const Icon(Icons.refresh),
+                backgroundColor: const Color.fromARGB(255, 223, 181, 11),
               ),
               SizedBox(width: 16), // ช่องว่างระหว่างปุ่ม
               FloatingActionButton(
