@@ -486,6 +486,50 @@ class _FormCheckPageState extends State<FormCheckPage> {
                           }
                         },
                       ),
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('firetank_Collection')
+                            .where('tank_id', isEqualTo: widget.tankId)
+                            .limit(1)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Text(
+                              'วันหมดอายุ: กำลังโหลด...',
+                              style: TextStyle(fontSize: fontSize),
+                            );
+                          }
+
+                          if (snapshot.hasError) {
+                            return Text(
+                              'วันหมดอายุ: เกิดข้อผิดพลาด',
+                              style: TextStyle(fontSize: fontSize),
+                            );
+                          }
+
+                          if (snapshot.hasData &&
+                              snapshot.data!.docs.isNotEmpty) {
+                            var doc = snapshot.data!.docs.first;
+                            int expirationYear = doc[
+                                'expiration_years']; // Fetch expiration year
+
+                            return Row(
+                              children: [
+                                Text(
+                                  'วันหมดอายุ : $expirationYear',
+                                  style: TextStyle(fontSize: fontSize),
+                                ),
+                              ],
+                            );
+                          } else {
+                            return Text(
+                              'วันหมดอายุ: ไม่มีข้อมูล',
+                              style: TextStyle(fontSize: fontSize),
+                            );
+                          }
+                        },
+                      ),
                     ],
                   ),
                 ),
