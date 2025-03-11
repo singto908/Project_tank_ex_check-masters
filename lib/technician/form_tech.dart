@@ -545,14 +545,15 @@ class _FormTechCheckPageState extends State<FormTechCheckPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => RequestTankChangePage()),
+                            builder: (context) => RequestTankChangePage(
+                                tankId: widget.tankId)), // ใช้ tankId ที่มีอยู่
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red, // พื้นหลังสีแดง
-                      foregroundColor: Colors.white, // ตัวอักษรสีขาว
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12), // ปรับขนาดปุ่ม
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8), // ทำมุมโค้งมน
                       ),
