@@ -1,3 +1,4 @@
+import 'package:firecheck_setup/admin/AdminApproveRequestsPage.dart';
 import 'package:flutter/material.dart';
 //import 'package:firecheck_setup/admin/dashboard_section/damage_info_section.dart';
 import 'package:firecheck_setup/admin/inspection_section/scheduleBox.dart';
@@ -468,11 +469,17 @@ Widget _buildDrawer(BuildContext context) {
           },
         ),
         ListTile(
-            leading: const Icon(Icons.settings), // ตั้งค่า
-            title: const Text('ตั้งค่า'),
-            onTap: () {
-              Navigator.pushNamed(context, '/Settings');
-            }),
+          leading: const Icon(Icons.settings), // ตั้งค่า
+          title: const Text('คำร้องขอเปลี่ยนถัง'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) =>
+                      AdminApproveRequestsPage()), // ✅ เพิ่ม Navigator.push
+            );
+          },
+        ),
         ListTile(
           leading: const Icon(Icons.logout), // ออกจากระบบ
           title: const Text('ออกจากระบบ'),
