@@ -23,6 +23,9 @@ class _RequestTankChangePageState extends State<RequestTankChangePage> {
     super.initState();
     fetchTankData();
     fetchTankTypes();
+    if (tankTypes.isNotEmpty) {
+      selectedTankType = tankTypes.first; // เลือกค่าเริ่มต้นอัตโนมัติ
+    }
   }
 
   /// ดึงข้อมูลถังดับเพลิงจาก Firestore
