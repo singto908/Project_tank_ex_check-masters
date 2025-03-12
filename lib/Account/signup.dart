@@ -41,9 +41,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
       if (userCredential.user != null) {
         await _firestore.collection('users').doc(userCredential.user!.uid).set({
+          'uid': userCredential.user!.uid, // เพิ่ม UID ลงไปใน Firestore
           'username': usernameController.text.trim(),
           'email': emailController.text.trim(),
           'role': selectedRole, // กำหนด role
+          'status': 'active',
           'createdAt': FieldValue.serverTimestamp(),
         });
 
@@ -67,7 +69,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Register')),
+      appBar: AppBar(title: Text('Register'), automaticallyImplyLeading: false),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
@@ -108,8 +110,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 items: [
                   DropdownMenuItem(value: 'user', child: Text('User')),
                   DropdownMenuItem(
-                      value: 'technician', child: Text('Technician')),
-                  DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                      value: 'technician', child: Text('Technician'))
                 ],
                 onChanged: (value) {
                   setState(() {

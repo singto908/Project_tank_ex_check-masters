@@ -753,7 +753,7 @@ class _FireTankFormPageState extends State<FireTankFormPage> {
   }
 
   Future<void> _generateQRCode(String tankId) async {
-    _qrCode = 'https://fire-check-db.web.app/user?tankId=$tankId';
+    _qrCode = 'https://fire-check-db.web.app/login?tankId=$tankId';
   }
 
   Future<void> _saveFireTankData() async {

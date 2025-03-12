@@ -1,4 +1,5 @@
 import 'package:firecheck_setup/admin/AdminApproveRequestsPage.dart';
+import 'package:firecheck_setup/admin/repair_updates.dart';
 import 'package:flutter/material.dart';
 //import 'package:firecheck_setup/admin/dashboard_section/damage_info_section.dart';
 import 'package:firecheck_setup/admin/inspection_section/scheduleBox.dart';
@@ -442,10 +443,20 @@ Widget _buildDrawer(BuildContext context) {
         ListTile(
           leading: const Icon(Icons.update), // อัปเดตสถานะ
           title: const Text('การอัปเดตสถานะ'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const RepairUpdatesScreen()),
+            );
+          },
         ),
         ListTile(
           leading: const Icon(Icons.manage_accounts), // จัดการผู้ใช้งาน
           title: const Text('จัดการผู้ใช้งาน'),
+          onTap: () {
+            Navigator.pushNamed(context, '/user_management');
+          },
         ),
         ListTile(
           leading: const Icon(Icons.build), // จัดการถังดับเพลิง
@@ -481,8 +492,11 @@ Widget _buildDrawer(BuildContext context) {
           },
         ),
         ListTile(
-          leading: const Icon(Icons.logout), // ออกจากระบบ
+          leading: const Icon(Icons.local_fire_department), // ประเภทถังดับเพลิง
           title: const Text('ออกจากระบบ'),
+          onTap: () {
+            Navigator.pushNamed(context, '/login');
+          },
         ),
 
         /*ListTile(

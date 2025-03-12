@@ -17,6 +17,7 @@ import 'admin/admin_damage.dart';
 import 'technician/form_tech.dart';
 import 'technician/dashboardTech.dart';
 import 'Account/signin.dart';
+import 'admin/user_management.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,7 +75,7 @@ Route<dynamic> _generateRoute(RouteSettings settings) {
       return MaterialPageRoute(builder: (context) => FireTankStatusPage());
 
     case '/inspectionhistory':
-      return MaterialPageRoute(builder: (context) => InspectionHistoryPage());
+      return MaterialPageRoute(builder: (context) => InspectionOverviewPage());
 
     case '/fire_tank_management':
       return MaterialPageRoute(builder: (context) => FireTankManagementPage());
@@ -88,7 +89,8 @@ Route<dynamic> _generateRoute(RouteSettings settings) {
 
     case '/FireTankStatusPage':
       return MaterialPageRoute(builder: (context) => FireTankStatusPage());
-
+    case '/user_management':
+      return MaterialPageRoute(builder: (context) => UserManagementPage());
     case '/AdminReport':
       return MaterialPageRoute(builder: (context) => AdminReportPage());
 
